@@ -1,0 +1,411 @@
+{
+  "info": {
+    "name": "Claims Management System",
+    "description": "CRUD + business rule endpoints for the Numiqers Claims Management System (Stories: Stateless -> Stateful).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "description": "Through the Nginx API Gateway. Use http://localhost:5000 to bypass the gateway and hit Express directly."
+    },
+    {
+      "key": "holderId",
+      "value": ""
+    },
+    {
+      "key": "policyId",
+      "value": ""
+    },
+    {
+      "key": "claimId",
+      "value": ""
+    },
+    {
+      "key": "jwtToken",
+      "value": "",
+      "description": "Auto-filled by the Login request's test script."
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.token) {",
+                  "    pm.collectionVariables.set('jwtToken', body.token);",
+                  "}",
+                  "pm.test('Registration succeeded and token stored', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.token).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"jane_doe\",\n  \"email\": \"jane@example.com\",\n  \"password\": \"Passw0rd!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Creates a new (non-admin) user account and immediately logs them in. On success, the test script stores the JWT into {{jwtToken}} just like Login does."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.token) {",
+                  "    pm.collectionVariables.set('jwtToken', body.token);",
+                  "}",
+                  "pm.test('Login succeeded and token stored', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.token).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Passw0rd!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Run this first. On success, the test script stores the JWT into the {{jwtToken}} collection variable, which every other request in this collection then sends automatically as Authorization: Bearer {{jwtToken}}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "Policyholders",
+      "item": [
+        {
+          "name": "Create Policyholder",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('holderId', pm.response.json().id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/policyholders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Manav Sharma\",\n  \"email\": \"manav@example.com\",\n  \"phone\": \"9876543210\",\n  \"address\": \"Ghaziabad, Uttar Pradesh\",\n  \"dateOfBirth\": \"1998-05-10\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Policyholder - Duplicate Email (expect 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/policyholders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate\",\n  \"email\": \"manav@example.com\",\n  \"phone\": \"9876543211\",\n  \"address\": \"Some other address\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Policyholders",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/policyholders"
+          }
+        },
+        {
+          "name": "Get Policyholder by Id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/policyholders/{{holderId}}"
+          }
+        },
+        {
+          "name": "Update Policyholder",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/policyholders/{{holderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9990001111\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Policyholder",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/policyholders/{{holderId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Policies",
+      "item": [
+        {
+          "name": "Create Policy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('policyId', pm.response.json().id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/policies",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyNumber\": \"POL-1001\",\n  \"policyholderId\": \"{{holderId}}\",\n  \"type\": \"Health\",\n  \"coverageAmount\": 500000,\n  \"premiumAmount\": 12000,\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2027-01-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Policies",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/policies"
+          }
+        },
+        {
+          "name": "List Policies by Policyholder",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/policies?policyholderId={{holderId}}"
+          }
+        },
+        {
+          "name": "Get Policy by Id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/policies/{{policyId}}"
+          }
+        },
+        {
+          "name": "Update Policy",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/policies/{{policyId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Active\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Policy",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/policies/{{policyId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Claims",
+      "item": [
+        {
+          "name": "Create Claim - within coverage (expect 201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('claimId', pm.response.json().id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/claims",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimNumber\": \"CLM-5001\",\n  \"policyId\": \"{{policyId}}\",\n  \"amountClaimed\": 45000,\n  \"description\": \"Hospitalization for minor surgery\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Claim - exceeds remaining coverage (expect 422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/claims",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimNumber\": \"CLM-5002\",\n  \"policyId\": \"{{policyId}}\",\n  \"amountClaimed\": 999999,\n  \"description\": \"Deliberately over the remaining coverage\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Claims",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/claims"
+          }
+        },
+        {
+          "name": "List Claims by Policy",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/claims?policyId={{policyId}}"
+          }
+        },
+        {
+          "name": "Get Claim by Id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/claims/{{claimId}}"
+          }
+        },
+        {
+          "name": "Approve Claim",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/claims/{{claimId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Approved\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Claim",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/claims/{{claimId}}"
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwtToken}}",
+        "type": "string"
+      }
+    ]
+  }
+}

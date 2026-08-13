@@ -1,0 +1,21 @@
+# Prometheus scrape config for the Claims Management System (Story 5 -
+# Monitoring). Scrapes the backend's /metrics endpoint directly over the
+# internal Docker network (see docker-compose.yml) — it does not go
+# through the Nginx gateway, the same way health checks bypass it.
+
+global:
+  scrape_interval: 15s # how often to poll each target
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "claims-backend"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:5000"]
+        labels:
+          service: "claims-management-backend"
+
+  # Prometheus monitoring itself — useful sanity check that the stack is up.
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

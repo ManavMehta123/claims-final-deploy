@@ -1,0 +1,24 @@
+# Only what the DAG-imported modules (train.py, ingestion/ingest.py,
+# evaluate_and_promote.py, registry.py) actually import. Deliberately
+# does NOT include ml-service/requirements.txt's flask/gunicorn/
+# google-generativeai — those are app.py-only and installing them here
+# risks upgrading Flask/Werkzeug past what this Airflow version supports,
+# which breaks the webserver/scheduler at runtime (see
+# docs/CONTINUOUS_LEARNING.md "Airflow image dependencies").
+#
+# Deliberately UNPINNED (unlike ml-service/requirements.txt): the
+# Dockerfile installs these against Airflow's own constraints file
+# (--constraint), which already pins exact versions for anything Airflow
+# itself depends on (e.g. pandas==2.1.4 for Airflow 2.9.3). An explicit
+# == pin here that disagrees with the constraint file — as an earlier
+# version of this file did with pandas==2.3.3 vs. the constraint's
+# pandas==2.1.4 — makes the install unsatisfiable. Leaving these
+# unpinned lets pip pick whatever version satisfies both the constraint
+# file and each other; exact reproducibility of these versions isn't
+# load-bearing for training/ingestion logic.
+pandas
+scikit-learn==1.8.0
+joblib==1.5.3
+mlflow
+requests
+dill==0.3.1.1

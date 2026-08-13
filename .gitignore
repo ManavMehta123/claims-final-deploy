@@ -1,0 +1,8 @@
+%USERPROFILE%
+.env
+GEMINI_API_KEY
+node_modules
+_pycache_
+venv
+dist
+build

@@ -1,0 +1,13 @@
+# Tells Grafana to auto-load any dashboard JSON dropped into this folder,
+# so the "Claims API Overview" dashboard is already there on first login.
+apiVersion: 1
+
+providers:
+  - name: "Claims API dashboards"
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards
