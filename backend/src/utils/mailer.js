@@ -29,6 +29,15 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
     greetingTimeout: 10_000,
     socketTimeout: 10_000,
   });
+
+  // Verify the SMTP credentials/connection once at boot so a bad
+  // password or blocked login shows up immediately in the deploy logs,
+  // instead of only surfacing later when someone actually requests a
+  // password reset.
+  transporter
+    .verify()
+    .then(() => console.log("[mailer] SMTP transporter verified - ready to send."))
+    .catch((err) => console.error("[mailer] SMTP verify FAILED - check SMTP_* env vars:", err));
 } else {
   // Not fatal - lets the app boot and everything else work even before
   // email is configured. Sending will just log instead (see below).

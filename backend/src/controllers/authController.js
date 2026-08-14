@@ -136,13 +136,16 @@ exports.forgotPassword = async (req, res, next) => {
     // The seeded admin account has no DB record and no forgot-password
     // support (its credentials live in env vars, not the user store).
     if (username && username === adminUsername) {
+      console.log("[forgotPassword] request for reserved admin username - no email sent (by design).");
       return res.json(genericResponse);
     }
 
     const user = username ? await userRepo.findByUsername(username) : await userRepo.findByEmail(email);
     if (!user) {
+      console.log(`[forgotPassword] no account matched "${username || email}" - no email sent.`);
       return res.json(genericResponse);
     }
+    console.log(`[forgotPassword] matched user id=${user.id}, sending reset link to ${user.email}`);
 
     const rawToken = crypto.randomBytes(32).toString("hex");
     const resetTokenHash = hashResetToken(rawToken);
@@ -162,9 +165,13 @@ exports.forgotPassword = async (req, res, next) => {
       to: user.email,
       resetLink,
       expiresInMinutes: RESET_TOKEN_TTL_MS / 60000,
-    }).catch((mailErr) => {
-      console.error("[forgotPassword] failed to send reset email:", mailErr);
-    });
+    })
+      .then(() => {
+        console.log(`[forgotPassword] reset email accepted by SMTP server for ${user.email}`);
+      })
+      .catch((mailErr) => {
+        console.error(`[forgotPassword] FAILED to send reset email to ${user.email}:`, mailErr);
+      });
 
     res.json(genericResponse);
   } catch (err) {
