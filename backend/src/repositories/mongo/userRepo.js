@@ -20,6 +20,25 @@ module.exports = {
     const doc = await User.findById(id);
     return doc ? doc.toJSON() : null;
   },
+  async setResetToken(userId, resetTokenHash, resetTokenExpiresAt) {
+    await User.findByIdAndUpdate(userId, { resetTokenHash, resetTokenExpiresAt });
+  },
+  // Only ever matched against non-expired hashes, so an old/used token
+  // can never resolve to a user even if resetTokenHash briefly overlaps.
+  async findByValidResetTokenHash(resetTokenHash) {
+    const doc = await User.findOne({ resetTokenHash, resetTokenExpiresAt: { $gt: new Date() } });
+    return doc ? doc.toJSON() : null;
+  },
+  // Updates the password on the SAME user record and clears the used
+  // token in one step — the account (and everything tied to it) never
+  // changes identity.
+  async updatePasswordAndClearToken(userId, passwordHash) {
+    await User.findByIdAndUpdate(userId, {
+      passwordHash,
+      resetTokenHash: null,
+      resetTokenExpiresAt: null,
+    });
+  },
   async _reset() {
     await User.deleteMany({});
   },

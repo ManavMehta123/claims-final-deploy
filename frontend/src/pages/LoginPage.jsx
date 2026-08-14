@@ -93,6 +93,11 @@ export default function LoginPage() {
               aria-invalid={!!fieldErrors.password}
             />
             {fieldErrors.password && <span className="field-error">{fieldErrors.password}</span>}
+            <div style={{ textAlign: "right", marginTop: 4 }}>
+              <Link to="/forgot-password" className="muted" style={{ fontSize: "0.85em" }}>
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: "100%", marginTop: 8, justifyContent: "center" }}>

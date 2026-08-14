@@ -23,6 +23,27 @@ module.exports = {
   async findById(id) {
     return store.get(id) || null;
   },
+  async setResetToken(userId, resetTokenHash, resetTokenExpiresAt) {
+    const record = store.get(userId);
+    if (!record) return;
+    record.resetTokenHash = resetTokenHash;
+    record.resetTokenExpiresAt = resetTokenExpiresAt;
+  },
+  async findByValidResetTokenHash(resetTokenHash) {
+    const now = new Date();
+    return (
+      Array.from(store.values()).find(
+        (u) => u.resetTokenHash === resetTokenHash && u.resetTokenExpiresAt && u.resetTokenExpiresAt > now
+      ) || null
+    );
+  },
+  async updatePasswordAndClearToken(userId, passwordHash) {
+    const record = store.get(userId);
+    if (!record) return;
+    record.passwordHash = passwordHash;
+    record.resetTokenHash = null;
+    record.resetTokenExpiresAt = null;
+  },
   async _reset() {
     store.clear();
   },

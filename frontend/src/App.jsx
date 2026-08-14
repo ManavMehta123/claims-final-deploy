@@ -7,6 +7,8 @@ import ClaimsPage from "./pages/ClaimsPage";
 import PredictClaimPage from "./pages/PredictClaimPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import AdminRoute from "./auth/AdminRoute";
 import { useAuth } from "./auth/AuthContext";
@@ -17,7 +19,7 @@ import ThemeToggle from "./components/ThemeToggle";
 // Home ("/") and Login/Register are full-bleed public pages with their own
 // layout - no sidebar, no content padding. Everything else lives inside the
 // authenticated app shell below.
-const CHROME_FREE_PATHS = ["/", "/login", "/register"];
+const CHROME_FREE_PATHS = ["/", "/login", "/register", "/forgot-password", "/reset-password"];
 
 export default function App() {
   const location = useLocation();
@@ -28,6 +30,8 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Routes>
     );
   }

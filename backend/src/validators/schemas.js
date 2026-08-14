@@ -85,6 +85,19 @@ const claimPredictionSchema = Joi.object({
   imageData: Joi.string().base64().optional().allow(""),
 });
 
+const forgotPasswordSchema = Joi.object({
+  // Accept either — whichever the user remembers.
+  username: Joi.string().optional(),
+  email: Joi.string().email().optional(),
+})
+  .or("username", "email")
+  .messages({ "object.missing": "username or email is required." });
+
+const resetPasswordSchema = Joi.object({
+  token: Joi.string().required(),
+  newPassword: Joi.string().min(8).max(72).required(),
+});
+
 module.exports = {
   policyholderSchema,
   policyholderUpdateSchema,
@@ -95,4 +108,6 @@ module.exports = {
   registerSchema,
   loginSchema,
   claimPredictionSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 };

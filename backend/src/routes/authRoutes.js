@@ -3,7 +3,7 @@ const rateLimit = require("express-rate-limit");
 const { ipKeyGenerator } = rateLimit;
 const controller = require("../controllers/authController");
 const validate = require("../validators/validate");
-const { registerSchema } = require("../validators/schemas");
+const { registerSchema, forgotPasswordSchema, resetPasswordSchema } = require("../validators/schemas");
 
 // Defense-in-depth against credential brute-forcing, independent of any
 // rate limiting the Nginx gateway also applies in front of the API.
@@ -123,5 +123,71 @@ router.post("/register", registerLimiter, validate(registerSchema), controller.r
  *         description: Too many login attempts
  */
 router.post("/login", loginLimiter, controller.login);
+
+// Same brute-force protection rationale as loginLimiter — keyed by IP
+// alone here since there's no "account being attempted" concept before
+// a token exists.
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "TooManyRequests", message: "Too many reset requests. Try again later." },
+});
+
+/**
+ * @openapi
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Request a password reset link for an existing account
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: >
+ *           Always returns 200 with a generic message, whether or not the
+ *           account exists (prevents username/email enumeration). If it
+ *           does exist, also includes resetToken/resetLink directly in
+ *           the response, since no email service is configured yet.
+ */
+router.post("/forgot-password", forgotPasswordLimiter, validate(forgotPasswordSchema), controller.forgotPassword);
+
+/**
+ * @openapi
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Set a new password using a valid reset token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, newPassword]
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Password updated
+ *       400:
+ *         description: Token missing, invalid, or expired
+ */
+router.post("/reset-password", validate(resetPasswordSchema), controller.resetPassword);
 
 module.exports = router;

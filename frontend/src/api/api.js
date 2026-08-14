@@ -56,6 +56,17 @@ export const api = {
     request("/auth/login", { method: "POST", body: JSON.stringify({ username, password }) }),
   register: (username, email, password, role = "user") =>
     request("/auth/register", { method: "POST", body: JSON.stringify({ username, email, password, role }) }),
+  // usernameOrEmail is sent as whichever field it looks like, so the same
+  // form field works whether the person types their username or email.
+  forgotPassword: (usernameOrEmail) =>
+    request("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify(
+        usernameOrEmail.includes("@") ? { email: usernameOrEmail } : { username: usernameOrEmail }
+      ),
+    }),
+  resetPassword: (token, newPassword) =>
+    request("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, newPassword }) }),
 
   // Policyholders
   listPolicyholders: () => request("/policyholders"),

@@ -112,6 +112,12 @@ const userSchema = new mongoose.Schema(
     // Bcrypt hash only — the plaintext password is never persisted.
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
+    // Forgot-password support. We store a hash of the reset token (never
+    // the raw token) plus its expiry, directly on this same user document —
+    // resetting a password only ever updates passwordHash on the existing
+    // record, it never creates a new user or touches their claims/policies.
+    resetTokenHash: { type: String, default: null },
+    resetTokenExpiresAt: { type: Date, default: null },
   },
   { timestamps: true, toJSON, toObject: toJSON }
 );
