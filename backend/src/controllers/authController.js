@@ -157,7 +157,7 @@ exports.forgotPassword = async (req, res, next) => {
       ? `${frontendUrl}/reset-password?token=${rawToken}`
       : `/reset-password?token=${rawToken}`;
 
-    // Respond immediately - don't make the person wait on the SMTP
+    // Respond immediately - don't make the person wait on the email
     // round-trip. The email is sent in the background; any failure is
     // just logged server-side (and never surfaced to the client, since
     // that would leak whether the account exists).
@@ -167,7 +167,7 @@ exports.forgotPassword = async (req, res, next) => {
       expiresInMinutes: RESET_TOKEN_TTL_MS / 60000,
     })
       .then(() => {
-        console.log(`[forgotPassword] reset email accepted by SMTP server for ${user.email}`);
+        console.log(`[forgotPassword] reset email accepted by Resend for ${user.email}`);
       })
       .catch((mailErr) => {
         console.error(`[forgotPassword] FAILED to send reset email to ${user.email}:`, mailErr);
