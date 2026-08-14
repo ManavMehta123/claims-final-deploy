@@ -17,17 +17,21 @@ exports.predict = async (req, res, next) => {
       body: JSON.stringify(req.body),
     });
 
-    // Attempt to parse JSON, but handle non-JSON (HTML/error pages) gracefully
+    // Read the body ONCE as text, then attempt to parse it. Calling
+    // response.json() and, on failure, response.text() on the SAME
+    // response tries to read its body stream twice — the fetch API
+    // throws "Body is unusable: Body has already been read" for that,
+    // which is what was surfacing as the prediction error.
+    const raw = await response.text();
     let data;
     try {
-      data = await response.json();
+      data = raw ? JSON.parse(raw) : {};
     } catch (parseErr) {
-      const text = await response.text();
       return res.status(502).json({
         error: 'InvalidModelServiceResponse',
         message: 'Model service returned a non-JSON response',
         status: response.status,
-        preview: text?.substring(0, 1000),
+        preview: raw?.substring(0, 1000),
       });
     }
 
@@ -59,17 +63,18 @@ exports.predictLLM = async (req, res, next) => {
       body: JSON.stringify(req.body),
     });
 
-    // Attempt to parse JSON, but handle non-JSON (HTML/error pages) gracefully
+    // Read the body ONCE as text, then attempt to parse it (see the
+    // matching comment in predict() above for why).
+    const raw = await response.text();
     let data;
     try {
-      data = await response.json();
+      data = raw ? JSON.parse(raw) : {};
     } catch (parseErr) {
-      const text = await response.text();
       return res.status(502).json({
         error: 'InvalidModelServiceResponse',
         message: 'Model service returned a non-JSON response',
         status: response.status,
-        preview: text?.substring(0, 1000),
+        preview: raw?.substring(0, 1000),
       });
     }
 
