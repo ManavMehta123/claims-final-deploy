@@ -21,6 +21,13 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
     port: SMTP_PORT,
     secure: SMTP_SECURE,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
+    // Fail fast instead of hanging - nodemailer's own defaults can wait
+    // up to a couple of minutes on a slow/unreachable server, which is
+    // pointless for a background send that already has no bearing on
+    // the HTTP response.
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 10_000,
   });
 } else {
   // Not fatal - lets the app boot and everything else work even before
