@@ -6,9 +6,10 @@ import ThemeToggle from "../components/ThemeToggle";
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const tokenFromUrl = searchParams.get("token") || "";
+  // The token comes only from the emailed link's URL - it's never shown
+  // or typed by the person, so there's nothing to copy/paste.
+  const token = searchParams.get("token") || "";
 
-  const [token, setToken] = useState(tokenFromUrl);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
@@ -18,7 +19,6 @@ export default function ResetPasswordPage() {
 
   const validate = () => {
     const errs = {};
-    if (!token.trim()) errs.token = "Reset token is required.";
     if (!newPassword) errs.newPassword = "New password is required.";
     else if (newPassword.length < 8) errs.newPassword = "Password must be at least 8 characters.";
     if (confirmPassword !== newPassword) errs.confirmPassword = "Passwords do not match.";
@@ -33,7 +33,7 @@ export default function ResetPasswordPage() {
 
     setSubmitting(true);
     try {
-      await api.resetPassword(token.trim(), newPassword);
+      await api.resetPassword(token, newPassword);
       setDone(true);
     } catch (err) {
       if (err.status === 400) {
@@ -66,26 +66,32 @@ export default function ResetPasswordPage() {
       <div className="login-main">
         <div className="login-main-toggle"><ThemeToggle /></div>
 
-        {!done ? (
+        {!token ? (
+          <div className="login-card">
+            <h2>Reset link missing</h2>
+            <div className="alert alert-error" style={{ marginTop: 8 }}>
+              This page needs the reset link from your email. Please open the
+              link in the password reset email, or request a new one.
+            </div>
+            <Link
+              to="/forgot-password"
+              className="btn btn-primary"
+              style={{ width: "100%", marginTop: 16, justifyContent: "center" }}
+            >
+              Request a reset link
+            </Link>
+          </div>
+        ) : !done ? (
           <form className="login-card" onSubmit={submit} noValidate>
             <h2>Reset password</h2>
-            <p className="muted">Enter your reset token and choose a new password.</p>
+            <p className="muted">Choose a new password for your account.</p>
 
             {error && <div className="alert alert-error">{error}</div>}
 
             <div className="form-field">
-              <label>Reset token</label>
-              <input
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                aria-invalid={!!fieldErrors.token}
-              />
-              {fieldErrors.token && <span className="field-error">{fieldErrors.token}</span>}
-            </div>
-
-            <div className="form-field">
               <label>New password</label>
               <input
+                autoFocus
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -115,7 +121,7 @@ export default function ResetPasswordPage() {
             </button>
 
             <p className="muted" style={{ marginTop: 16, textAlign: "center" }}>
-              Don't have a token? <Link to="/forgot-password">Request a reset link</Link>
+              Link expired or not working? <Link to="/forgot-password">Request a new one</Link>
             </p>
           </form>
         ) : (

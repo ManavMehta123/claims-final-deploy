@@ -3,12 +3,13 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { jwtSecret, jwtExpiresIn, adminUsername, adminPasswordHash } = require("../config/auth");
 const { userRepo } = require("../repositories");
+const { sendPasswordResetEmail } = require("../utils/mailer");
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 function hashResetToken(rawToken) {
-  // The raw token only ever exists in the one-time link. We store a
-  // SHA-256 hash of it (like a password hash, but this token is
+  // The raw token only ever exists in the one-time emailed link. We store
+  // a SHA-256 hash of it (like a password hash, but this token is
   // short-lived and single-use) so a database leak alone can't be used
   // to reset anyone's password.
   return crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -120,17 +121,16 @@ exports.login = async (req, res, next) => {
  * record — it never creates a new account, so all of that user's
  * policyholders/policies/claims stay exactly where they are.
  *
- * No email service is configured, so — deliberately, for now — the raw
- * reset link is returned directly in the response instead of emailed.
- * Always responds 200 with a generic message even when no account
- * matches, so this endpoint can't be used to check which
- * usernames/emails are registered.
+ * The raw token is emailed to the account's address as a reset link;
+ * it is never returned in the API response. Always responds 200 with a
+ * generic message even when no account matches, so this endpoint can't
+ * be used to check which usernames/emails are registered.
  */
 exports.forgotPassword = async (req, res, next) => {
   try {
     const { username, email } = req.body || {};
     const genericResponse = {
-      message: "If an account exists, a password reset link has been generated.",
+      message: "If an account exists, a password reset link has been sent to its email address.",
     };
 
     // The seeded admin account has no DB record and no forgot-password
@@ -152,17 +152,21 @@ exports.forgotPassword = async (req, res, next) => {
     const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/+$/, "");
     const resetLink = frontendUrl
       ? `${frontendUrl}/reset-password?token=${rawToken}`
-      : null;
+      : `/reset-password?token=${rawToken}`;
 
-    res.json({
-      ...genericResponse,
-      // Shown directly in the UI in place of an email, until an email
-      // service is wired up. Remove resetToken/resetLink from the
-      // response once real email delivery is added.
-      resetToken: rawToken,
-      resetLink,
-      expiresInMinutes: RESET_TOKEN_TTL_MS / 60000,
-    });
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        resetLink,
+        expiresInMinutes: RESET_TOKEN_TTL_MS / 60000,
+      });
+    } catch (mailErr) {
+      // Don't leak delivery failures to the client (would confirm the
+      // account exists); log server-side for debugging instead.
+      console.error("[forgotPassword] failed to send reset email:", mailErr);
+    }
+
+    res.json(genericResponse);
   } catch (err) {
     next(err);
   }
@@ -171,9 +175,10 @@ exports.forgotPassword = async (req, res, next) => {
 /**
  * POST /api/auth/reset-password
  * Body: { token, newPassword }
- * Verifies the (hashed, non-expired) token, then updates passwordHash on
- * the SAME user record and clears the token. The account's id, role, and
- * all linked data are untouched — only the password changes.
+ * Verifies the (hashed, non-expired) token from the emailed link, then
+ * updates passwordHash on the SAME user record and clears the token. The
+ * account's id, role, and all linked data are untouched — only the
+ * password changes.
  */
 exports.resetPassword = async (req, res, next) => {
   try {

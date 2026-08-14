@@ -139,7 +139,7 @@ const forgotPasswordLimiter = rateLimit({
  * @openapi
  * /api/auth/forgot-password:
  *   post:
- *     summary: Request a password reset link for an existing account
+ *     summary: Email a password reset link for an existing account
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -158,8 +158,7 @@ const forgotPasswordLimiter = rateLimit({
  *         description: >
  *           Always returns 200 with a generic message, whether or not the
  *           account exists (prevents username/email enumeration). If it
- *           does exist, also includes resetToken/resetLink directly in
- *           the response, since no email service is configured yet.
+ *           does exist, a reset link is emailed to the account's address.
  */
 router.post("/forgot-password", forgotPasswordLimiter, validate(forgotPasswordSchema), controller.forgotPassword);
 
@@ -167,7 +166,7 @@ router.post("/forgot-password", forgotPasswordLimiter, validate(forgotPasswordSc
  * @openapi
  * /api/auth/reset-password:
  *   post:
- *     summary: Set a new password using a valid reset token
+ *     summary: Set a new password using the token from the emailed reset link
  *     tags: [Auth]
  *     requestBody:
  *       required: true

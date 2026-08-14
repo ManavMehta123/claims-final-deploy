@@ -8,12 +8,11 @@ export default function ForgotPasswordPage() {
   const [fieldError, setFieldError] = useState(null);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState(null); // { message, resetLink, resetToken }
+  const [sent, setSent] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setError(null);
-    setResult(null);
 
     if (!usernameOrEmail.trim()) {
       setFieldError("Enter your username or email.");
@@ -23,8 +22,8 @@ export default function ForgotPasswordPage() {
 
     setSubmitting(true);
     try {
-      const res = await api.forgotPassword(usernameOrEmail.trim());
-      setResult(res);
+      await api.forgotPassword(usernameOrEmail.trim());
+      setSent(true);
     } catch (err) {
       if (err.status === 429) {
         setError("Too many reset requests. Please wait a few minutes and try again.");
@@ -47,7 +46,7 @@ export default function ForgotPasswordPage() {
           <h1>Forgot your password?</h1>
           <p>
             No problem — your account and all its data stay exactly as they are.
-            We'll just help you set a new password.
+            We'll email you a link to set a new password.
           </p>
           <Link to="/login" className="login-back-link">← Back to sign in</Link>
         </div>
@@ -56,10 +55,10 @@ export default function ForgotPasswordPage() {
       <div className="login-main">
         <div className="login-main-toggle"><ThemeToggle /></div>
 
-        {!result ? (
+        {!sent ? (
           <form className="login-card" onSubmit={submit} noValidate>
             <h2>Reset your password</h2>
-            <p className="muted">Enter your username or email and we'll generate a reset link.</p>
+            <p className="muted">Enter your username or email and we'll send you a reset link.</p>
 
             {error && <div className="alert alert-error">{error}</div>}
 
@@ -89,43 +88,15 @@ export default function ForgotPasswordPage() {
           </form>
         ) : (
           <div className="login-card">
-            <h2>Check your reset link</h2>
-            <p className="muted">{result.message}</p>
-
-            {result.resetLink ? (
-              <>
-                <div className="alert alert-success" style={{ wordBreak: "break-all", marginTop: 16 }}>
-                  <Link to={result.resetLink.replace(window.location.origin, "")}>
-                    {result.resetLink}
-                  </Link>
-                </div>
-                <p className="muted" style={{ marginTop: 8, fontSize: "0.85em" }}>
-                  This link expires in {result.expiresInMinutes} minutes. No email service is
-                  configured yet, so the link is shown here directly instead of being emailed.
-                </p>
-              </>
-            ) : result.resetToken ? (
-              <>
-                <div className="form-field" style={{ marginTop: 16 }}>
-                  <label>Reset token</label>
-                  <input value={result.resetToken} readOnly onFocus={(e) => e.target.select()} />
-                </div>
-                <p className="muted" style={{ fontSize: "0.85em" }}>
-                  Copy this token into the reset password page within {result.expiresInMinutes} minutes.
-                </p>
-                <Link
-                  to={`/reset-password?token=${result.resetToken}`}
-                  className="btn btn-primary"
-                  style={{ width: "100%", marginTop: 12, justifyContent: "center" }}
-                >
-                  Continue to reset password
-                </Link>
-              </>
-            ) : (
-              <p className="muted" style={{ marginTop: 16 }}>
-                If that account exists, a reset link has been generated for it.
-              </p>
-            )}
+            <h2>Check your email</h2>
+            <div className="alert alert-success" style={{ marginTop: 8 }}>
+              If an account exists for that username or email, we've sent a password
+              reset link to its inbox.
+            </div>
+            <p className="muted" style={{ marginTop: 12 }}>
+              The link expires in 30 minutes. Open it from your email to set a new
+              password — no need to come back to this page.
+            </p>
 
             <p className="muted" style={{ marginTop: 16, textAlign: "center" }}>
               <Link to="/login">← Back to sign in</Link>
