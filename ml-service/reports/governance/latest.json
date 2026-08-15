@@ -1,0 +1,51 @@
+{
+  "report_file": "governance_demo-challenger_20260815-080326.json",
+  "generated_at": "2026-08-15T08:03:26.747920+00:00",
+  "triggered_by": "manual-demo",
+  "challenger_version": "demo-challenger",
+  "champion_version": "v20260815-041506",
+  "data_drift": {
+    "reference_rows": 1399,
+    "current_rows": 1399,
+    "features": {
+      "Cost_of_vehicle": {
+        "type": "numeric",
+        "psi": 0.0,
+        "severity": "stable"
+      },
+      "Min_coverage": {
+        "type": "numeric",
+        "psi": 0.0,
+        "severity": "stable"
+      },
+      "Max_coverage": {
+        "type": "numeric",
+        "psi": 0.0,
+        "severity": "stable"
+      },
+      "days_to_expiry": {
+        "type": "numeric",
+        "psi": 0.0,
+        "severity": "stable"
+      },
+      "Insurance_company": {
+        "type": "categorical",
+        "psi": 0.0,
+        "severity": "stable"
+      }
+    },
+    "overall_psi": 0.0,
+    "overall_severity": "stable",
+    "flagged_features": [],
+    "drifted": false
+  },
+  "model_drift": {
+    "has_champion": true,
+    "champion_version": "v20260815-041506",
+    "condition_f1_delta": 0.0,
+    "amount_r2_delta": 0.0,
+    "drifted": false,
+    "reason": "no regression beyond tolerance"
+  },
+  "overall_drifted": false
+}

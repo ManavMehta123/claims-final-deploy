@@ -1,0 +1,19 @@
+{
+  "condition_accuracy": 1.0,
+  "condition_f1": 1.0,
+  "amount_mae": 2184.9060355880865,
+  "amount_rmse": 2851.2599554188496,
+  "amount_r2": -0.020826425593694298,
+  "trained_at": "2026-08-15T09:45:08.456046",
+  "features": [
+    "Cost_of_vehicle",
+    "Min_coverage",
+    "Max_coverage",
+    "days_to_expiry",
+    "Insurance_company"
+  ],
+  "row_counts": {
+    "seed": 1399
+  },
+  "version": "v20260815-041506"
+}

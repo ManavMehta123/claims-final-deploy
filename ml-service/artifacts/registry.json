@@ -1,5 +1,5 @@
 {
-  "current": "v20260813-084940",
+  "current": "v20260815-041506",
   "versions": [
     {
       "version": "v20260813-084940",
@@ -27,7 +27,63 @@
       "trained_from": {
         "seed": 1399
       },
+      "status": "champion-history"
+    },
+    {
+      "version": "v20260815-041506",
+      "path": "versions\\v20260815-041506",
+      "metrics": {
+        "condition_accuracy": 1.0,
+        "condition_f1": 1.0,
+        "amount_mae": 2184.9060355880865,
+        "amount_rmse": 2851.2599554188496,
+        "amount_r2": -0.020826425593694298,
+        "trained_at": "2026-08-15T09:45:08.456046",
+        "features": [
+          "Cost_of_vehicle",
+          "Min_coverage",
+          "Max_coverage",
+          "days_to_expiry",
+          "Insurance_company"
+        ],
+        "row_counts": {
+          "seed": 1399
+        },
+        "version": "v20260815-041506"
+      },
+      "trained_at": "2026-08-15T04:15:08.456721+00:00",
+      "trained_from": {
+        "seed": 1399
+      },
       "status": "current"
+    },
+    {
+      "version": "demo-challenger",
+      "path": "versions\\demo-challenger",
+      "metrics": {
+        "condition_accuracy": 1.0,
+        "condition_f1": 1.0,
+        "amount_mae": 2184.9060355880865,
+        "amount_rmse": 2851.2599554188496,
+        "amount_r2": -0.020826425593694298,
+        "trained_at": "2026-08-15T13:31:28.269268",
+        "features": [
+          "Cost_of_vehicle",
+          "Min_coverage",
+          "Max_coverage",
+          "days_to_expiry",
+          "Insurance_company"
+        ],
+        "row_counts": {
+          "seed": 1399
+        },
+        "version": "demo-challenger"
+      },
+      "trained_at": "2026-08-15T08:01:28.269268+00:00",
+      "trained_from": {
+        "seed": 1399
+      },
+      "status": "challenger"
     }
   ]
 }

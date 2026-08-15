@@ -1,8 +1,8 @@
 """
 Model Governance layer: logs data drift and model drift for every
 challenger produced by the Continuous Learning Pipeline, and writes a
-timestamped report that can be inspected on demand or wired into the
-retraining flow.
+timestamped report (JSON + HTML) that can be inspected on demand or
+wired into the retraining flow.
 
 This is deliberately a thin layer on top of what train.py and
 evaluate_and_promote.py already produce, following the same pattern as
@@ -228,6 +228,122 @@ def check_model_drift(challenger_metrics, champion_metrics):
 
 
 # --------------------------------------------------------------------------
+# HTML report rendering
+# --------------------------------------------------------------------------
+
+def _badge_class(severity_or_status):
+    """Map stable/watch/alert (data drift) or ok/drifted (model drift)
+    to a CSS class."""
+    s = (severity_or_status or "").lower()
+    if s in ("alert", "drifted"):
+        return "sev-bad"
+    if s in ("watch",):
+        return "sev-warn"
+    return "sev-ok"
+
+
+def _render_html(report):
+    generated_at = report.get("generated_at", "")
+    triggered_by = report.get("triggered_by", "")
+    challenger_version = report.get("challenger_version", "")
+    champion_version = report.get("champion_version") or "none"
+
+    dd = report["data_drift"]
+    md = report["model_drift"]
+
+    overall_psi = dd.get("overall_psi")
+    overall_psi_display = f"{overall_psi:.4f}" if overall_psi is not None else "n/a"
+
+    feature_rows = ""
+    for name, info in dd["features"].items():
+        psi = info["psi"]
+        psi_display = f"{psi:.4f}" if psi is not None else "n/a"
+        feature_rows += f"""
+        <tr>
+            <td>{name}</td>
+            <td>{info['type']}</td>
+            <td>{psi_display}</td>
+            <td><span class="badge {_badge_class(info['severity'])}">{info['severity']}</span></td>
+        </tr>"""
+
+    if md["has_champion"]:
+        f1_delta = md["condition_f1_delta"]
+        r2_delta = md["amount_r2_delta"]
+        model_rows = f"""
+        <tr>
+            <td>condition_f1</td>
+            <td>{f1_delta:+.4f}</td>
+            <td>{champion_version}</td>
+        </tr>
+        <tr>
+            <td>amount_r2</td>
+            <td>{r2_delta:+.4f}</td>
+            <td>{champion_version}</td>
+        </tr>"""
+    else:
+        model_rows = """
+        <tr><td colspan="3">No current champion to compare against.</td></tr>"""
+
+    model_status = "drifted" if md["drifted"] else "ok"
+    overall_drifted = report["overall_drifted"]
+    overall_status = "DRIFT DETECTED" if overall_drifted else "no drift detected"
+    overall_cls = "sev-bad" if overall_drifted else "sev-ok"
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Model Governance Report</title>
+<style>
+  body {{ font-family: -apple-system, Segoe UI, Arial, sans-serif; background: #f4f5f7; margin: 0; padding: 32px; color: #1f2430; }}
+  .card {{ max-width: 880px; margin: 0 auto; background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }}
+  h1 {{ font-size: 22px; margin-bottom: 4px; }}
+  .meta {{ color: #667085; font-size: 13px; margin-bottom: 20px; }}
+  h2 {{ font-size: 16px; margin-top: 28px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }}
+  table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
+  th {{ text-align: left; background: #f7f8fa; padding: 8px 10px; border-bottom: 1px solid #e4e7ec; font-weight: 600; }}
+  td {{ padding: 8px 10px; border-bottom: 1px solid #eef0f2; }}
+  .badge {{ display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; text-transform: capitalize; }}
+  .sev-ok {{ background: #e6f6ec; color: #1a7f4b; }}
+  .sev-warn {{ background: #fff4e0; color: #b26a00; }}
+  .sev-bad {{ background: #fde8e8; color: #c62828; }}
+  .overall {{ margin-top: 8px; }}
+  .reason {{ font-size: 13px; color: #667085; margin-top: 6px; }}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Model Governance Report</h1>
+    <div class="meta">
+      Generated {generated_at} &middot; triggered by {triggered_by} &middot;
+      challenger {challenger_version} &middot; champion {champion_version}
+    </div>
+
+    <h2>Data Drift <span class="badge {_badge_class(dd['overall_severity'])}">{dd['overall_severity']}</span></h2>
+    <div class="meta">
+      Reference: seed dataset ({dd['reference_rows']} rows) &middot;
+      Current: seed + live_feedback ({dd['current_rows']} rows) &middot;
+      mean PSI = {overall_psi_display}
+    </div>
+    <table>
+      <tr><th>Feature</th><th>Type</th><th>PSI</th><th>Severity</th></tr>
+      {feature_rows}
+    </table>
+
+    <h2>Model Drift <span class="badge {_badge_class(model_status)}">{model_status}</span></h2>
+    <table>
+      <tr><th>Metric</th><th>Delta vs. champion</th><th>Champion version</th></tr>
+      {model_rows}
+    </table>
+    <div class="reason">{md['reason']}</div>
+
+    <h2 class="overall">Overall: <span class="badge {overall_cls}">{overall_status}</span></h2>
+  </div>
+</body>
+</html>"""
+
+
+# --------------------------------------------------------------------------
 # Orchestration + report
 # --------------------------------------------------------------------------
 
@@ -270,11 +386,21 @@ def run_governance_check(challenger_version, triggered_by="manual"):
     with open(os.path.join(REPORTS_DIR, "latest.json"), "w") as f:
         json.dump({"report_file": report_name, **report}, f, indent=2)
 
-    _print_summary(report, report_path)
+    # HTML rendering of the same report — timestamped copy plus a
+    # "latest.html" pointer, mirroring the JSON latest-pointer pattern.
+    html_content = _render_html(report)
+    html_report_name = report_name.replace(".json", ".html")
+    html_report_path = os.path.join(REPORTS_DIR, html_report_name)
+    with open(html_report_path, "w") as f:
+        f.write(html_content)
+    with open(os.path.join(REPORTS_DIR, "latest.html"), "w") as f:
+        f.write(html_content)
+
+    _print_summary(report, report_path, html_report_path)
     return report
 
 
-def _print_summary(report, report_path):
+def _print_summary(report, report_path, html_report_path=None):
     dd, md = report["data_drift"], report["model_drift"]
     print(f"Governance report for challenger '{report['challenger_version']}' "
           f"(triggered by: {report['triggered_by']})")
@@ -286,6 +412,8 @@ def _print_summary(report, report_path):
     print(f"  Model drift: {'DRIFTED' if md['drifted'] else 'OK'} — {md['reason']}")
     print(f"  Overall    : {'DRIFT DETECTED' if report['overall_drifted'] else 'no drift detected'}")
     print(f"  Report written to {report_path}")
+    if html_report_path:
+        print(f"  HTML report written to {html_report_path}")
 
 
 def main():
