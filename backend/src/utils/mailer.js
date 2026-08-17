@@ -1,23 +1,29 @@
-// Email is sent via the Resend HTTP API (https://resend.com) instead of
+// Email is sent via the Brevo HTTP API (https://brevo.com) instead of
 // raw SMTP sockets. Render (and many free-tier PaaS hosts) block outbound
 // SMTP ports (25/465/587) to prevent spam abuse, which made nodemailer
 // time out with ETIMEDOUT on every send even with correct credentials.
-// Resend's API is a normal HTTPS POST (port 443), which is never blocked.
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-// Must be an address on a domain you've verified in Resend, OR
-// "onboarding@resend.dev" while testing (Resend's shared sandbox sender -
-// only delivers to the email address you signed up to Resend with).
-const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
+// Brevo's API is a normal HTTPS POST (port 443), which is never blocked.
+//
+// Unlike Resend's free-tier sandbox sender (which only delivers to the
+// developer's own signup email), a Brevo sender only needs to be
+// individually verified (click a confirmation link Brevo emails you) -
+// no domain purchase/DNS setup required - and can then send to ANY
+// recipient. See Settings > Senders, domains, IPs in the Brevo dashboard.
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+// Must be an email address verified as a sender in your Brevo account
+// (Settings > Senders, domains, IPs). E.g. your own Gmail address.
+const EMAIL_FROM = process.env.EMAIL_FROM || "manavmehta197@gmail.com";
+const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || "Claims Management System";
 
-if (!RESEND_API_KEY) {
+if (!BREVO_API_KEY) {
   // Not fatal - lets the app boot and everything else work even before
   // email is configured. Sending will just log instead (see below).
   console.warn(
-    "[mailer] RESEND_API_KEY not set - password reset emails will be " +
+    "[mailer] BREVO_API_KEY not set - password reset emails will be " +
       "logged to the console instead of actually sent. See backend/.env.example."
   );
 } else {
-  console.log("[mailer] Resend configured - ready to send.");
+  console.log("[mailer] Brevo configured - ready to send.");
 }
 
 /**
@@ -54,23 +60,30 @@ async function sendPasswordResetEmail({ to, resetLink, expiresInMinutes }) {
     </div>
   `;
 
-  if (!RESEND_API_KEY) {
-    console.warn(`[mailer] Resend not configured - would have emailed ${to}: ${resetLink}`);
+  if (!BREVO_API_KEY) {
+    console.warn(`[mailer] Brevo not configured - would have emailed ${to}: ${resetLink}`);
     return { delivered: false };
   }
 
-  const res = await fetch("https://api.resend.com/emails", {
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "api-key": BREVO_API_KEY,
       "Content-Type": "application/json",
+      Accept: "application/json",
     },
-    body: JSON.stringify({ from: EMAIL_FROM, to, subject, text, html }),
+    body: JSON.stringify({
+      sender: { email: EMAIL_FROM, name: EMAIL_FROM_NAME },
+      to: [{ email: to }],
+      subject,
+      textContent: text,
+      htmlContent: html,
+    }),
   });
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`[mailer] Resend API error ${res.status}: ${body}`);
+    throw new Error(`[mailer] Brevo API error ${res.status}: ${body}`);
   }
 
   return { delivered: true };
